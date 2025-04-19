@@ -5,20 +5,21 @@ import java.awt.*;
 
 public class ProductDetailDialog extends JDialog
 {
-    public ProductDetailDialog(int id, String name, String desc, double price, int stock)
+    public ProductDetailDialog(Product product)
     {
         setTitle("Ürün Detayı");
         setSize(300, 250);
         setLocationRelativeTo(null);
         setLayout(new GridLayout(5, 1));
 
-        add(new JLabel("ID: " + id));
-        add(new JLabel("Ad: " + name));
-        add(new JLabel("Açıklama: " + desc));
-        add(new JLabel("Fiyat: " + price + "₺"));
+        add(new JLabel("ID: " + product.getId()));
+        add(new JLabel("Ad: " + product.getName()));
+        add(new JLabel("Açıklama: " + product.getDescription()));
+        add(new JLabel("Fiyat: " + product.getPrice() + "₺"));
 
-        JLabel stockLabel = new JLabel("Stok: " + (stock > 0 ? "Var (" + stock + " adet)" : "Tükendi"));
-        stockLabel.setForeground(stock > 0 ? Color.GREEN : Color.RED);
+        JLabel stockLabel = new JLabel("Stok: " +
+                (product.getStock() > 0 ? "Var (" + product.getStock() + " adet)" : "Tükendi"));
+        stockLabel.setForeground(product.getStock() > 0 ? Color.GREEN : Color.RED);
         add(stockLabel);
 
         setModal(true);
