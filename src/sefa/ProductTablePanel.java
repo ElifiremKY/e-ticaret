@@ -3,68 +3,77 @@ package Proje;
 import javax.swing.*;
 import javax.swing.table.DefaultTableModel;
 import java.awt.*;
+import java.util.List;
 
 public class ProductTablePanel extends JPanel
 {
+    private JTable table;
+    private DefaultTableModel model;
+    private ProductDAO productDAO = new ProductDAO();
+
     public ProductTablePanel(String role)
     {
         setLayout(new BorderLayout());
 
         String[] columns = {"ID", "Ad", "Açıklama", "Fiyat", "Stok"};
-        Object[][] data = {
-                {1, "Kulaklık", "Kablosuz kulaklık", 299.99, 5},
-                {2, "Laptop", "16GB RAM, i7", 14999.90, 0},
-                {3, "Mouse", "Oyuncu mouse", 399.50, 20}
-        };
-
-        JTable table = new JTable(new DefaultTableModel(data, columns));
+        model = new DefaultTableModel(columns, 0);
+        table = new JTable(model);
         JScrollPane scrollPane = new JScrollPane(table);
         add(scrollPane, BorderLayout.CENTER);
 
         JButton detayBtn = new JButton("Detayları Göster");
         add(detayBtn, BorderLayout.SOUTH);
 
-        detayBtn.addActionListener(e ->
-        {
-            int selectedRow = table.getSelectedRow();
-            if (selectedRow != -1)
-            {
-                int id = (int) table.getValueAt(selectedRow, 0);
-                String name = table.getValueAt(selectedRow, 1).toString();
-                String desc = table.getValueAt(selectedRow, 2).toString();
-                double price = (double) table.getValueAt(selectedRow, 3);
-                int stock = (int) table.getValueAt(selectedRow, 4);
+        detayBtn.addActionListener(e -> showSelectedProductDetails());
 
-                Product product = new Product.ProductBuilder()
-                        .setId(id)
-                        .setName(name)
-                        .setDescription(desc)
-                        .setPrice(price)
-                        .setStock(stock)
-                        .build();
-
-                new ProductDetailDialog(product);
-
-            } else
-            {
-                JOptionPane.showMessageDialog(this, "Lütfen bir ürün seçin.");
-            }
-        });
+        loadProductsFromDatabase();
     }
 
-    // Yeni ürün ekleme
+    private void loadProductsFromDatabase()
+    {
+        model.setRowCount(0); // Tabloyu temizle
+
+        List<Product> products = productDAO.getAllProducts();
+        for (Product product : products)
+        {
+            model.addRow(new Object[]{
+                    product.getId(),
+                    product.getName(),
+                    product.getDescription(),
+                    product.getPrice(),
+                    product.getStock()
+            });
+        }
+    }
+
+    private void showSelectedProductDetails()
+    {
+        int selectedRow = table.getSelectedRow();
+        if (selectedRow != -1)
+        {
+            Product product = new Product.ProductBuilder()
+                    .setId((int) model.getValueAt(selectedRow, 0))
+                    .setName((String) model.getValueAt(selectedRow, 1))
+                    .setDescription((String) model.getValueAt(selectedRow, 2))
+                    .setPrice((double) model.getValueAt(selectedRow, 3))
+                    .setStock((int) model.getValueAt(selectedRow, 4))
+                    .build();
+
+            new ProductDetailDialog(product);
+        } else
+        {
+            JOptionPane.showMessageDialog(this, "Lütfen bir ürün seçin.");
+        }
+    }
+
     public void showAddProductDialog()
     {
-        JTextField idField = new JTextField();
         JTextField nameField = new JTextField();
         JTextField descField = new JTextField();
         JTextField priceField = new JTextField();
         JTextField stockField = new JTextField();
-        JTextField sellerIdField = new JTextField(); // Sadece örnek için
 
         JPanel panel = new JPanel(new GridLayout(0, 2));
-        panel.add(new JLabel("Ürün ID:"));
-        panel.add(idField);
         panel.add(new JLabel("Ad:"));
         panel.add(nameField);
         panel.add(new JLabel("Açıklama:"));
@@ -73,8 +82,6 @@ public class ProductTablePanel extends JPanel
         panel.add(priceField);
         panel.add(new JLabel("Stok:"));
         panel.add(stockField);
-        panel.add(new JLabel("Satıcı ID:"));
-        panel.add(sellerIdField);
 
         int result = JOptionPane.showConfirmDialog(this, panel, "Yeni Ürün Ekle",
                 JOptionPane.OK_CANCEL_OPTION, JOptionPane.PLAIN_MESSAGE);
@@ -83,23 +90,21 @@ public class ProductTablePanel extends JPanel
         {
             try
             {
-                int id = Integer.parseInt(idField.getText());
                 String name = nameField.getText();
                 String desc = descField.getText();
                 double price = Double.parseDouble(priceField.getText());
                 int stock = Integer.parseInt(stockField.getText());
-                // sellerId alınabilir ama kullanılmıyor
 
                 Product product = new Product.ProductBuilder()
-                        .setId(id)
                         .setName(name)
                         .setDescription(desc)
                         .setPrice(price)
                         .setStock(stock)
                         .build();
 
-                DefaultTableModel model = (DefaultTableModel) ((JTable) ((JScrollPane) getComponent(0)).getViewport().getView()).getModel();
-                model.addRow(new Object[]{product.getId(), product.getName(), product.getDescription(), product.getPrice(), product.getStock()});
+                productDAO.addProduct(product);
+                loadProductsFromDatabase();
+
             } catch (Exception e)
             {
                 JOptionPane.showMessageDialog(this, "Lütfen geçerli bilgiler girin.", "Hata", JOptionPane.ERROR_MESSAGE);
@@ -107,20 +112,21 @@ public class ProductTablePanel extends JPanel
         }
     }
 
-    // Ürün silme
     public void removeSelectedProduct()
     {
-        JTable table = (JTable) ((JScrollPane) getComponent(0)).getViewport().getView();
         int selectedRow = table.getSelectedRow();
-
         if (selectedRow != -1)
         {
-            DefaultTableModel model = (DefaultTableModel) table.getModel();
-            model.removeRow(selectedRow);
+            int confirm = JOptionPane.showConfirmDialog(this, "Bu ürünü silmek istediğinize emin misiniz?", "Onay", JOptionPane.YES_NO_OPTION);
+            if (confirm == JOptionPane.YES_OPTION)
+            {
+                int id = (int) model.getValueAt(selectedRow, 0);
+                productDAO.deleteProduct(id);
+                loadProductsFromDatabase();
+            }
         } else
         {
             JOptionPane.showMessageDialog(this, "Lütfen silmek için bir ürün seçin.");
         }
     }
-
 }
